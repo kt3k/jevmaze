@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "basecoat-css";
+
+@source "../static";
+@source "./";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}

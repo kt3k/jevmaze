@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jev Maze</title>
+    <meta name="description"
+      content="TypeSafe の System One モデル Jev に、周囲の情報だけを与えて 2D 迷路を解かせるシミュレーション" />
+    <link rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%272%27 y=%272%27 width=%2728%27 height=%2728%27 rx=%274%27 fill=%27%23111%27/%3E%3Cpath d=%27M8 8h16M8 8v16M16 8v10M24 14v10M8 24h8%27 stroke=%27%23fff%27 stroke-width=%273%27 fill=%27none%27/%3E%3Ccircle cx=%2721%27 cy=%2721%27 r=%273.5%27 fill=%27%23f97316%27/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+    try {
+      if (matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.classList.add("dark");
+      }
+    } catch (_) {}
+    </script>
+  </head>
+  <body class="min-h-screen">
+    <header class="border-b">
+      <div
+        class="mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-2 px-4 py-4">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Jev Maze</h1>
+          <p class="text-sm text-muted-foreground">
+          TypeSafe の System One モデル <a class="underline" href="https://docs.typesafe.ai/" target="_blank" rel="noreferrer">Jev</a>
+          に周囲の情報だけを与え、上下左右の判断を繰り返させて出口に辿り着くまでを観察します。
+        </p>
+        </div>
+        <span id="status" class="badge" data-variant="outline">待機中</span>
+      </div>
+    </header>
+
+    <main
+      class="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside class="flex flex-col gap-4">
+        <div class="card" data-size="sm">
+          <header>
+            <h2>迷路</h2>
+            <p>サイズとシードから迷路を生成します。</p>
+          </header>
+          <section class="flex flex-col gap-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="field">
+                <label for="width">幅</label>
+                <select id="width" class="select"></select>
+              </div>
+              <div class="field">
+                <label for="height">高さ</label>
+                <select id="height" class="select"></select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="seed">シード</label>
+              <div class="flex gap-2">
+                <input id="seed" type="number" class="input min-w-0 flex-1"
+                  min="0" step="1" />
+                <button id="randomSeed" type="button" class="btn"
+                  data-variant="outline" title="ランダムなシード">🎲</button>
+              </div>
+            </div>
+            <div class="field">
+              <label
+                for="braid">ループ率 <span id="braidValue" class="text-muted-foreground">0%</span></label>
+              <input id="braid" type="range" class="input" min="0" max="100"
+                step="5" value="0" />
+              <p
+                class="text-xs text-muted-foreground">行き止まりの壁を開けてループを作る割合。0% は一本道の完全迷路。</p>
+            </div>
+            <button id="newMaze" type="button" class="btn w-full"
+              data-variant="secondary">新しい迷路を生成</button>
+          </section>
+        </div>
+
+        <div class="card" data-size="sm">
+          <header>
+            <h2>Jev に与える情報</h2>
+            <p>4方向の壁の有無は常に渡します。追加の情報を選べます。</p>
+          </header>
+          <section class="flex flex-col gap-2" id="infoOptions">
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visibleCells" checked /><span>見通し距離（各方向で壁まで何マスか）</span></label>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visits" checked /><span>隣接マスの訪問回数</span></label>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-lastMove" checked /><span>直前の移動方向</span></label>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-currentVisits" checked /><span>現在マスの訪問回数</span></label>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-stepsTaken" /><span>これまでのステップ数</span></label>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-exitHint" /><span>出口の方角（ヒント）</span></label>
+            <div class="field mt-2">
+              <label for="instructions">指示文（Choice の instructions）</label>
+              <textarea id="instructions" class="textarea" rows="5"></textarea>
+            </div>
+            <div class="field">
+              <label for="model">モデル</label>
+              <input id="model" type="text" class="input" value="jev-latest" />
+            </div>
+          </section>
+        </div>
+
+        <div class="card" data-size="sm">
+          <header>
+            <h2>実行</h2>
+          </header>
+          <section class="flex flex-col gap-3">
+            <div class="field">
+              <label
+                for="delay">1手ごとの待ち時間 <span id="delayValue" class="text-muted-foreground">200ms</span></label>
+              <input id="delay" type="range" class="input" min="0" max="2000"
+                step="50" value="200" />
+            </div>
+            <div class="field">
+              <label for="maxSteps">最大ステップ数</label>
+              <input id="maxSteps" type="number" class="input" min="1" step="1"
+                value="1000" />
+            </div>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="showPath" /><span>最短経路を表示</span></label>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="run" type="button" class="btn">開始</button>
+              <button id="stepBtn" type="button" class="btn"
+                data-variant="outline">1手</button>
+              <button id="reset" type="button" class="btn"
+                data-variant="outline">リセット</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <div class="flex min-w-0 flex-col gap-4">
+        <div id="errorBox" class="alert hidden" role="alert"
+          data-variant="destructive">
+          <h2>エラー</h2>
+          <section id="errorText"></section>
+        </div>
+
+        <div class="card" data-size="sm">
+          <section class="overflow-x-auto">
+            <div id="canvasWrap" class="w-full">
+              <canvas id="maze" class="mx-auto block rounded-md"></canvas>
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+            緑: スタート、黄: 出口、橙の丸: Jev、青の濃さ: 訪問回数。
+          </p>
+          </section>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="card" data-size="sm">
+            <header>
+              <h2>統計</h2>
+            </header>
+            <section>
+              <dl id="stats"
+                class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"></dl>
+            </section>
+          </div>
+          <div class="card" data-size="sm">
+            <header>
+              <h2>直近の判断</h2>
+              <p id="decisionMeta"
+                class="text-muted-foreground">まだ判断していません。</p>
+            </header>
+            <section class="flex flex-col gap-2">
+              <div id="probs" class="flex flex-col gap-1"></div>
+            </section>
+          </div>
+        </div>
+
+        <div class="card" data-size="sm">
+          <header>
+            <h2>試行の履歴</h2>
+            <p>各試行の結果。比率 = ステップ数 ÷ 最短経路長。</p>
+          </header>
+          <section class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>迷路</th>
+                  <th>ループ</th>
+                  <th>情報</th>
+                  <th>結果</th>
+                  <th class="text-right">ステップ</th>
+                  <th class="text-right">最短</th>
+                  <th class="text-right">比率</th>
+                  <th class="text-right">API</th>
+                  <th class="text-right">平均遅延</th>
+                  <th class="text-right">時間</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
