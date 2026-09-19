@@ -37,6 +37,33 @@
       <aside class="flex flex-col gap-4">
         <div class="card" data-size="sm">
           <header>
+            <h2>実行</h2>
+          </header>
+          <section class="flex flex-col gap-3">
+            <div class="field">
+              <label
+                for="delay">1手ごとの待ち時間 <span id="delayValue" class="text-muted-foreground">200ms</span></label>
+              <input id="delay" type="range" class="input" min="0" max="2000"
+                step="50" value="200" />
+            </div>
+            <div class="field">
+              <label for="maxSteps">最大ステップ数</label>
+              <input id="maxSteps" type="number" class="input" min="1" step="1"
+                value="1000" />
+            </div>
+            <label class="field"
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="showPath" /><span>最短経路を表示</span></label>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="run" type="button" class="btn">開始</button>
+              <button id="stepBtn" type="button" class="btn"
+                data-variant="outline">1手</button>
+              <button id="reset" type="button" class="btn"
+                data-variant="outline">リセット</button>
+            </div>
+          </section>
+        </div>
+        <div class="card" data-size="sm">
+          <header>
             <h2>迷路</h2>
             <p>サイズとシードから迷路を生成します。</p>
           </header>
@@ -98,34 +125,6 @@
             <div class="field">
               <label for="model">モデル</label>
               <input id="model" type="text" class="input" value="jev-latest" />
-            </div>
-          </section>
-        </div>
-
-        <div class="card" data-size="sm">
-          <header>
-            <h2>実行</h2>
-          </header>
-          <section class="flex flex-col gap-3">
-            <div class="field">
-              <label
-                for="delay">1手ごとの待ち時間 <span id="delayValue" class="text-muted-foreground">200ms</span></label>
-              <input id="delay" type="range" class="input" min="0" max="2000"
-                step="50" value="200" />
-            </div>
-            <div class="field">
-              <label for="maxSteps">最大ステップ数</label>
-              <input id="maxSteps" type="number" class="input" min="1" step="1"
-                value="1000" />
-            </div>
-            <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="showPath" /><span>最短経路を表示</span></label>
-            <div class="grid grid-cols-3 gap-2">
-              <button id="run" type="button" class="btn">開始</button>
-              <button id="stepBtn" type="button" class="btn"
-                data-variant="outline">1手</button>
-              <button id="reset" type="button" class="btn"
-                data-variant="outline">リセット</button>
             </div>
           </section>
         </div>
