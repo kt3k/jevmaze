@@ -1,7 +1,6 @@
 /** Tiny i18n layer: two dictionaries, browser-preference detection, manual override. */
 
 export type Lang = "ja" | "en";
-export type LangSetting = Lang | "auto";
 
 const STORAGE_KEY = "jevmaze.lang";
 
@@ -9,7 +8,6 @@ const ja = {
   "header.desc":
     'TypeSafe の System One モデル <a class="underline" href="https://docs.typesafe.ai/" target="_blank" rel="noreferrer">Jev</a> に周囲の情報だけを与え、上下左右の判断を繰り返させて出口に辿り着くまでを観察します。',
   "lang.label": "言語",
-  "lang.auto": "自動",
 
   "run.title": "実行",
   "run.delay": "1手ごとの待ち時間",
@@ -63,6 +61,7 @@ const ja = {
   "status.error": "エラー",
 
   "stats.title": "統計",
+  "stats.status": "状態",
   "stats.maze": "迷路",
   "stats.mazeValue": "{width} × {height}（シード {seed}）",
   "stats.steps": "ステップ数",
@@ -108,7 +107,6 @@ const en: Record<Key, string> = {
   "header.desc":
     'Give <a class="underline" href="https://docs.typesafe.ai/" target="_blank" rel="noreferrer">Jev</a>, TypeSafe\'s System One model, nothing but its immediate surroundings, let it pick up/down/left/right one step at a time, and watch how long it takes to reach the exit.',
   "lang.label": "Language",
-  "lang.auto": "Auto",
 
   "run.title": "Run",
   "run.delay": "Delay per move",
@@ -163,6 +161,7 @@ const en: Record<Key, string> = {
   "status.error": "Error",
 
   "stats.title": "Stats",
+  "stats.status": "Status",
   "stats.maze": "Maze",
   "stats.mazeValue": "{width} × {height} (seed {seed})",
   "stats.steps": "Steps",
@@ -219,27 +218,23 @@ export function detectLang(): Lang {
   return "en";
 }
 
-export function getSetting(): LangSetting {
+/** The saved override, or the browser preference when nothing was chosen yet. */
+export function initialLang(): Lang {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "ja" || v === "en") return v;
   } catch {
-    // Storage may be unavailable; fall through to auto.
+    // Storage may be unavailable; fall through to detection.
   }
-  return "auto";
+  return detectLang();
 }
 
-export function saveSetting(setting: LangSetting): void {
+export function saveLang(lang: Lang): void {
   try {
-    if (setting === "auto") localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, setting);
+    localStorage.setItem(STORAGE_KEY, lang);
   } catch {
     // Ignore storage failures; the choice still applies for this page load.
   }
-}
-
-export function resolve(setting: LangSetting): Lang {
-  return setting === "auto" ? detectLang() : setting;
 }
 
 export function getLang(): Lang {

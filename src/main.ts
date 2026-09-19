@@ -1,11 +1,10 @@
 import { DEFAULT_INSTRUCTIONS } from "../shared/types.ts";
 import {
   applyStatic,
-  getSetting,
+  initialLang,
   type Key,
-  type LangSetting,
-  resolve,
-  saveSetting,
+  type Lang,
+  saveLang,
   setLang,
   t,
 } from "./i18n.ts";
@@ -43,7 +42,6 @@ const ui = {
   run: $<HTMLButtonElement>("run"),
   stepBtn: $<HTMLButtonElement>("stepBtn"),
   reset: $<HTMLButtonElement>("reset"),
-  status: $<HTMLSpanElement>("status"),
   errorBox: $<HTMLDivElement>("errorBox"),
   errorText: $<HTMLDivElement>("errorText"),
   canvas: $<HTMLCanvasElement>("maze"),
@@ -161,15 +159,6 @@ function update(): void {
     shortestPath: path,
   });
 
-  ui.status.textContent = statusLabel(sim.status);
-  ui.status.dataset.variant = sim.status === "solved"
-    ? "primary"
-    : sim.status === "error" || sim.status === "gave_up"
-    ? "destructive"
-    : sim.status === "running"
-    ? "secondary"
-    : "outline";
-
   const finished = sim.status === "solved" || sim.status === "gave_up" ||
     sim.status === "error";
   ui.run.textContent = running
@@ -195,6 +184,7 @@ function update(): void {
   const shortest = Math.max(0, path.length - 1);
   const avgLatency = sim.apiCalls ? sim.totalLatencyMs / sim.apiCalls : 0;
   const rows: [string, string][] = [
+    [t("stats.status"), statusLabel(sim.status)],
     [
       t("stats.maze"),
       t("stats.mazeValue", {
@@ -388,14 +378,14 @@ function wire(): void {
   ui.reset.addEventListener("click", resetSim);
   globalThis.addEventListener("resize", update);
   ui.lang.addEventListener("change", () => {
-    applyLang(ui.lang.value as LangSetting);
-    saveSetting(ui.lang.value as LangSetting);
+    applyLang(ui.lang.value as Lang);
+    saveLang(ui.lang.value as Lang);
   });
 }
 
-function applyLang(setting: LangSetting): void {
-  setLang(resolve(setting));
-  ui.lang.value = setting;
+function applyLang(lang: Lang): void {
+  setLang(lang);
+  ui.lang.value = lang;
   applyStatic();
   if (sim) {
     update();
@@ -403,7 +393,7 @@ function applyLang(setting: LangSetting): void {
   }
 }
 
-applyLang(getSetting());
+applyLang(initialLang());
 setupSelects();
 wire();
 buildMaze();
