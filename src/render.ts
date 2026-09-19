@@ -6,12 +6,6 @@ export interface RenderOptions {
   shortestPath: Point[];
 }
 
-function cssVar(name: string, fallback: string): string {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name)
-    .trim();
-  return v || fallback;
-}
-
 /** Draw the maze, visit heatmap, trail, optional shortest path and the agent. */
 export function render(
   canvas: HTMLCanvasElement,
@@ -38,10 +32,11 @@ export function render(
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const dark = document.documentElement.classList.contains("dark");
-  const bg = cssVar("--color-card", dark ? "#0a0a0a" : "#ffffff");
-  const wallColor = cssVar("--color-foreground", dark ? "#fafafa" : "#0a0a0a");
-  const heat = dark ? "56, 189, 248" : "37, 99, 235";
+  // The maze itself is drawn in white, black and grays only, independent of the theme.
+  const bg = "#ffffff";
+  const wallColor = "#000000";
+  const trailColor = "#525252";
+  const pathColor = "#a3a3a3";
 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
@@ -49,7 +44,7 @@ export function render(
   const cx = (x: number) => pad + x * cell;
   const cy = (y: number) => pad + y * cell;
 
-  // Visit heatmap.
+  // Visit heatmap: light gray for one visit, darker the more often a cell was visited.
   let maxVisits = 1;
   for (let i = 0; i < sim.visits.length; i++) {
     maxVisits = Math.max(maxVisits, sim.visits[i]);
@@ -58,24 +53,51 @@ export function render(
     for (let x = 0; x < maze.width; x++) {
       const v = sim.visits[y * maze.width + x];
       if (v === 0) continue;
-      const alpha = 0.15 + 0.6 * Math.min(1, v / Math.max(2, maxVisits));
-      ctx.fillStyle = `rgba(${heat}, ${alpha.toFixed(3)})`;
+      const t = Math.min(1, v / Math.max(2, maxVisits));
+      const gray = Math.round(232 - t * 80); // 232 (1 visit) .. 152 (most visited)
+      ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
       ctx.fillRect(cx(x), cy(y), cell, cell);
     }
   }
 
-  // Start and exit cells.
-  ctx.fillStyle = dark ? "rgba(74, 222, 128, 0.35)" : "rgba(22, 163, 74, 0.25)";
-  ctx.fillRect(cx(maze.start.x), cy(maze.start.y), cell, cell);
-  ctx.fillStyle = dark ? "rgba(251, 191, 36, 0.5)" : "rgba(245, 158, 11, 0.45)";
-  ctx.fillRect(cx(maze.exit.x), cy(maze.exit.y), cell, cell);
+  // Exit cell: diagonal hatching so it stays recognisable at any cell size.
+  {
+    const x0 = cx(maze.exit.x), y0 = cy(maze.exit.y);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x0, y0, cell, cell);
+    ctx.clip();
+    ctx.strokeStyle = "#737373";
+    ctx.lineWidth = Math.max(1, cell * 0.08);
+    ctx.beginPath();
+    const gap = Math.max(3, cell / 4);
+    for (let o = -cell; o < cell * 2; o += gap) {
+      ctx.moveTo(x0 + o, y0 + cell);
+      ctx.lineTo(x0 + o + cell, y0);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Start cell: an "S" when there is room for it.
+  if (cell >= 14) {
+    ctx.fillStyle = "#737373";
+    ctx.font = `bold ${Math.floor(cell * 0.5)}px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      "S",
+      cx(maze.start.x) + cell / 2,
+      cy(maze.start.y) + cell / 2 + 1,
+    );
+  }
 
   // Shortest path.
   if (opts.showShortestPath && opts.shortestPath.length > 1) {
-    ctx.strokeStyle = dark
-      ? "rgba(74, 222, 128, 0.9)"
-      : "rgba(22, 163, 74, 0.9)";
-    ctx.lineWidth = Math.max(1, cell * 0.12);
+    ctx.strokeStyle = pathColor;
+    ctx.lineWidth = Math.max(1, cell * 0.1);
+    ctx.lineJoin = "miter";
+    ctx.lineCap = "butt";
     ctx.setLineDash([cell * 0.3, cell * 0.25]);
     ctx.beginPath();
     for (let i = 0; i < opts.shortestPath.length; i++) {
@@ -90,12 +112,10 @@ export function render(
 
   // Trail of the agent.
   if (sim.trail.length > 1) {
-    ctx.strokeStyle = dark
-      ? "rgba(251, 146, 60, 0.8)"
-      : "rgba(234, 88, 12, 0.75)";
-    ctx.lineWidth = Math.max(1, cell * 0.18);
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    ctx.strokeStyle = trailColor;
+    ctx.lineWidth = Math.max(1, cell * 0.16);
+    ctx.lineJoin = "miter";
+    ctx.lineCap = "butt";
     ctx.beginPath();
     for (let i = 0; i < sim.trail.length; i++) {
       const p = sim.trail[i];
@@ -134,17 +154,17 @@ export function render(
   }
   ctx.stroke();
 
-  // Agent.
+  // Agent: black disc with a white ring so it stands out on any gray.
   const ax = cx(sim.pos.x) + cell / 2, ay = cy(sim.pos.y) + cell / 2;
-  ctx.fillStyle = "#f97316";
+  ctx.fillStyle = "#000000";
   ctx.beginPath();
   ctx.arc(ax, ay, cell * 0.32, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = bg;
-  ctx.lineWidth = Math.max(1, cell * 0.06);
+  ctx.lineWidth = Math.max(1, cell * 0.07);
   ctx.stroke();
 
-  // Direction of the last move.
+  // Direction of the last move: a white dot inside the disc.
   if (sim.lastMove && cell >= 12) {
     const d =
       { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[sim.lastMove];
