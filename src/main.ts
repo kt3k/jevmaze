@@ -1,4 +1,14 @@
 import { DEFAULT_INSTRUCTIONS } from "../shared/types.ts";
+import {
+  applyStatic,
+  getSetting,
+  type Key,
+  type LangSetting,
+  resolve,
+  saveSetting,
+  setLang,
+  t,
+} from "./i18n.ts";
 import { generateMaze, type Maze, type Point, shortestPath } from "./maze.ts";
 import { randomSeed } from "./prng.ts";
 import { probabilityBars, render } from "./render.ts";
@@ -41,6 +51,7 @@ const ui = {
   decisionMeta: $<HTMLParagraphElement>("decisionMeta"),
   probs: $<HTMLDivElement>("probs"),
   historyBody: $<HTMLTableSectionElement>("historyBody"),
+  lang: $<HTMLSelectElement>("lang"),
 };
 
 const INFO_KEYS: (keyof InfoOptions)[] = [
@@ -51,14 +62,6 @@ const INFO_KEYS: (keyof InfoOptions)[] = [
   "stepsTaken",
   "exitHint",
 ];
-const INFO_SHORT: Record<keyof InfoOptions, string> = {
-  visibleCells: "見通し",
-  visits: "訪問",
-  lastMove: "直前",
-  currentVisits: "現在",
-  stepsTaken: "歩数",
-  exitHint: "方角",
-};
 const SIZES = [5, 6, 8, 10, 12, 15, 20, 25, 30, 40];
 
 interface RunSummary {
@@ -97,8 +100,10 @@ function readSimOptions(): SimOptions {
 }
 
 function infoLabel(info: InfoOptions): string {
-  const on = INFO_KEYS.filter((k) => info[k]).map((k) => INFO_SHORT[k]);
-  return on.length ? on.join("・") : "壁のみ";
+  const on = INFO_KEYS.filter((k) => info[k]).map((k) =>
+    t(`infoShort.${k}` as Key)
+  );
+  return on.length ? on.join(t("infoShort.separator")) : t("infoShort.none");
 }
 
 function setupSelects(): void {
@@ -142,14 +147,9 @@ function stopLoop(): void {
   if (sim && sim.status === "running") sim.status = "paused";
 }
 
-const STATUS_LABEL: Record<SimState["status"], string> = {
-  idle: "待機中",
-  running: "実行中",
-  paused: "一時停止",
-  solved: "ゴール！",
-  gave_up: "上限到達",
-  error: "エラー",
-};
+function statusLabel(status: SimState["status"]): string {
+  return t(`status.${status}` as Key);
+}
 
 function fmtMs(ms: number): string {
   return ms >= 10_000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -161,7 +161,7 @@ function update(): void {
     shortestPath: path,
   });
 
-  ui.status.textContent = STATUS_LABEL[sim.status];
+  ui.status.textContent = statusLabel(sim.status);
   ui.status.dataset.variant = sim.status === "solved"
     ? "primary"
     : sim.status === "error" || sim.status === "gave_up"
@@ -173,10 +173,10 @@ function update(): void {
   const finished = sim.status === "solved" || sim.status === "gave_up" ||
     sim.status === "error";
   ui.run.textContent = running
-    ? "一時停止"
+    ? t("run.pause")
     : sim.steps > 0 && !finished
-    ? "再開"
-    : "開始";
+    ? t("run.resume")
+    : t("run.start");
   ui.run.disabled = finished;
   ui.stepBtn.disabled = running || finished;
   for (
@@ -195,16 +195,30 @@ function update(): void {
   const shortest = Math.max(0, path.length - 1);
   const avgLatency = sim.apiCalls ? sim.totalLatencyMs / sim.apiCalls : 0;
   const rows: [string, string][] = [
-    ["迷路", `${maze.width} × ${maze.height}（シード ${maze.seed}）`],
-    ["ステップ数", String(sim.steps)],
-    ["最短経路長", String(shortest)],
-    ["比率", sim.steps ? (sim.steps / shortest).toFixed(2) : "-"],
-    ["Jev の判断回数", String(sim.apiCalls)],
-    ["一本道で自動移動", String(sim.forcedMoves)],
-    ["平均レイテンシ", sim.apiCalls ? fmtMs(avgLatency) : "-"],
-    ["経過時間", sim.startedAt !== null ? fmtMs(sim.elapsedMs) : "-"],
-    ["トークン", `${sim.inputTokens} in / ${sim.outputTokens} out`],
+    [
+      t("stats.maze"),
+      t("stats.mazeValue", {
+        width: maze.width,
+        height: maze.height,
+        seed: maze.seed,
+      }),
+    ],
+    [t("stats.steps"), String(sim.steps)],
+    [t("stats.shortest"), String(shortest)],
+    [t("stats.ratio"), sim.steps ? (sim.steps / shortest).toFixed(2) : "-"],
+    [t("stats.apiCalls"), String(sim.apiCalls)],
+    [t("stats.forced"), String(sim.forcedMoves)],
+    [t("stats.latency"), sim.apiCalls ? fmtMs(avgLatency) : "-"],
+    [t("stats.elapsed"), sim.startedAt !== null ? fmtMs(sim.elapsedMs) : "-"],
+    [
+      t("stats.tokens"),
+      t("stats.tokensValue", {
+        input: sim.inputTokens,
+        output: sim.outputTokens,
+      }),
+    ],
   ];
+
   ui.stats.replaceChildren();
   for (const [k, v] of rows) {
     const dt = document.createElement("dt");
@@ -218,21 +232,23 @@ function update(): void {
 
   const last = sim.history[sim.history.length - 1];
   if (!last) {
-    ui.decisionMeta.textContent = "まだ判断していません。";
+    ui.decisionMeta.textContent = t("decision.none");
     probabilityBars(ui.probs, null, null, []);
   } else if (last.forced) {
-    ui.decisionMeta.textContent =
-      `ステップ ${last.step}: 一本道のため Jev に聞かずに「${
-        dirLabel(last.direction)
-      }」へ移動`;
+    ui.decisionMeta.textContent = t("decision.forced", {
+      step: last.step,
+      dir: dirLabel(last.direction),
+    });
     probabilityBars(ui.probs, null, last.direction, [last.direction]);
   } else if (last.decision) {
     const d = last.decision;
-    ui.decisionMeta.textContent = `ステップ ${last.step}: 「${
-      dirLabel(d.choice)
-    }」を選択（確信度 ${
-      (d.confidence * 100).toFixed(0)
-    }%、${d.latency_ms}ms、${d.model}）`;
+    ui.decisionMeta.textContent = t("decision.chosen", {
+      step: last.step,
+      dir: dirLabel(d.choice),
+      confidence: (d.confidence * 100).toFixed(0),
+      latency: d.latency_ms,
+      model: d.model,
+    });
     probabilityBars(
       ui.probs,
       d.probabilities,
@@ -245,7 +261,7 @@ function update(): void {
 }
 
 function dirLabel(d: string): string {
-  return { up: "上", down: "下", left: "左", right: "右" }[d] ?? d;
+  return t(`dir.${d}` as Key);
 }
 
 function showError(msg: string): void {
@@ -283,7 +299,7 @@ function renderHistory(): void {
       r.maze,
       `${Math.round(r.braid * 100)}%`,
       r.info,
-      STATUS_LABEL[r.status],
+      statusLabel(r.status),
       String(r.steps),
       String(r.shortest),
       r.shortest ? (r.steps / r.shortest).toFixed(2) : "-",
@@ -371,8 +387,23 @@ function wire(): void {
   });
   ui.reset.addEventListener("click", resetSim);
   globalThis.addEventListener("resize", update);
+  ui.lang.addEventListener("change", () => {
+    applyLang(ui.lang.value as LangSetting);
+    saveSetting(ui.lang.value as LangSetting);
+  });
 }
 
+function applyLang(setting: LangSetting): void {
+  setLang(resolve(setting));
+  ui.lang.value = setting;
+  applyStatic();
+  if (sim) {
+    update();
+    renderHistory();
+  }
+}
+
+applyLang(getSetting());
 setupSelects();
 wire();
 buildMaze();

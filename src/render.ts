@@ -1,4 +1,5 @@
 import { hasWall, type Point } from "./maze.ts";
+import { type Key, t } from "./i18n.ts";
 import type { SimState } from "./sim.ts";
 
 export interface RenderOptions {
@@ -188,12 +189,6 @@ export function probabilityBars(
   chosen: string | null,
   options: string[],
 ): void {
-  const label: Record<string, string> = {
-    up: "上",
-    down: "下",
-    left: "左",
-    right: "右",
-  };
   container.replaceChildren();
   for (const d of ["up", "down", "left", "right"]) {
     const row = document.createElement("div");
@@ -201,9 +196,9 @@ export function probabilityBars(
     const p = probabilities?.[d];
     const available = options.includes(d);
     const name = document.createElement("span");
-    name.className = "w-5 shrink-0 " +
+    name.className = "w-12 shrink-0 " +
       (available ? "" : "text-muted-foreground");
-    name.textContent = label[d];
+    name.textContent = t(`dir.${d}` as Key);
     const bar = document.createElement("div");
     bar.className = "progress h-2 flex-1 rounded-full bg-muted";
     const fill = document.createElement("span");
@@ -215,7 +210,7 @@ export function probabilityBars(
     val.className =
       "w-12 shrink-0 text-right tabular-nums text-muted-foreground";
     val.textContent = p === undefined
-      ? (available ? "-" : "壁")
+      ? (available ? "-" : t("decision.wall"))
       : `${(p * 100).toFixed(1)}%`;
     row.append(name, bar, val);
     container.appendChild(row);

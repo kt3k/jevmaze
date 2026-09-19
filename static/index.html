@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -23,12 +23,20 @@
         class="mx-auto flex max-w-7xl flex-wrap items-baseline justify-between gap-2 px-4 py-4">
         <div>
           <h1 class="text-xl font-semibold tracking-tight">Jev Maze</h1>
-          <p class="text-sm text-muted-foreground">
-          TypeSafe の System One モデル <a class="underline" href="https://docs.typesafe.ai/" target="_blank" rel="noreferrer">Jev</a>
-          に周囲の情報だけを与え、上下左右の判断を繰り返させて出口に辿り着くまでを観察します。
-        </p>
+          <p class="text-sm text-muted-foreground"
+            data-i18n-html="header.desc"></p>
         </div>
-        <span id="status" class="badge" data-variant="outline">待機中</span>
+        <div class="flex items-center gap-3">
+          <label class="field" data-orientation="horizontal">
+            <span class="sr-only" data-i18n="lang.label"></span>
+            <select id="lang" class="select" data-size="sm">
+              <option value="auto" data-i18n="lang.auto"></option>
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <span id="status" class="badge" data-variant="outline"></span>
+        </div>
       </div>
     </header>
 
@@ -37,93 +45,95 @@
       <aside class="flex flex-col gap-4">
         <div class="card" data-size="sm">
           <header>
-            <h2>実行</h2>
+            <h2 data-i18n="run.title"></h2>
           </header>
           <section class="flex flex-col gap-3">
             <div class="field">
               <label
-                for="delay">1手ごとの待ち時間 <span id="delayValue" class="text-muted-foreground">200ms</span></label>
+                for="delay"><span data-i18n="run.delay"></span> <span id="delayValue" class="text-muted-foreground">200ms</span></label>
               <input id="delay" type="range" class="input" min="0" max="2000"
                 step="50" value="200" />
             </div>
             <div class="field">
-              <label for="maxSteps">最大ステップ数</label>
+              <label for="maxSteps" data-i18n="run.maxSteps"></label>
               <input id="maxSteps" type="number" class="input" min="1" step="1"
                 value="1000" />
             </div>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="showPath" /><span>最短経路を表示</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="showPath" /><span data-i18n="run.showPath"></span></label>
             <div class="grid grid-cols-3 gap-2">
-              <button id="run" type="button" class="btn">開始</button>
+              <button id="run" type="button" class="btn"></button>
               <button id="stepBtn" type="button" class="btn"
-                data-variant="outline">1手</button>
+                data-variant="outline" data-i18n="run.step"></button>
               <button id="reset" type="button" class="btn"
-                data-variant="outline">リセット</button>
+                data-variant="outline" data-i18n="run.reset"></button>
             </div>
           </section>
         </div>
         <div class="card" data-size="sm">
           <header>
-            <h2>迷路</h2>
-            <p>サイズとシードから迷路を生成します。</p>
+            <h2 data-i18n="maze.title"></h2>
+            <p data-i18n="maze.desc"></p>
           </header>
           <section class="flex flex-col gap-3">
             <div class="grid grid-cols-2 gap-3">
               <div class="field">
-                <label for="width">幅</label>
+                <label for="width" data-i18n="maze.width"></label>
                 <select id="width" class="select"></select>
               </div>
               <div class="field">
-                <label for="height">高さ</label>
+                <label for="height" data-i18n="maze.height"></label>
                 <select id="height" class="select"></select>
               </div>
             </div>
             <div class="field">
-              <label for="seed">シード</label>
+              <label for="seed" data-i18n="maze.seed"></label>
               <div class="flex gap-2">
                 <input id="seed" type="number" class="input min-w-0 flex-1"
                   min="0" step="1" />
                 <button id="randomSeed" type="button" class="btn"
-                  data-variant="outline" title="ランダムなシード">🎲</button>
+                  data-variant="outline"
+                  data-i18n-title="maze.randomSeed">🎲</button>
               </div>
             </div>
             <div class="field">
               <label
-                for="braid">ループ率 <span id="braidValue" class="text-muted-foreground">0%</span></label>
+                for="braid"><span data-i18n="maze.braid"></span> <span id="braidValue" class="text-muted-foreground">0%</span></label>
               <input id="braid" type="range" class="input" min="0" max="100"
                 step="5" value="0" />
               <p
-                class="text-xs text-muted-foreground">行き止まりの壁を開けてループを作る割合。0% は一本道の完全迷路。</p>
+                class="text-xs text-muted-foreground"
+                data-i18n="maze.braidHelp"></p>
             </div>
             <button id="newMaze" type="button" class="btn w-full"
-              data-variant="secondary">新しい迷路を生成</button>
+              data-variant="secondary" data-i18n="maze.new"></button>
           </section>
         </div>
 
         <div class="card" data-size="sm">
           <header>
-            <h2>Jev に与える情報</h2>
-            <p>4方向の壁の有無は常に渡します。追加の情報を選べます。</p>
+            <h2 data-i18n="info.title"></h2>
+            <p data-i18n="info.desc"></p>
           </header>
           <section class="flex flex-col gap-2" id="infoOptions">
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visibleCells" checked /><span>見通し距離（各方向で壁まで何マスか）</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visibleCells" checked /><span data-i18n="info.visibleCells"></span></label>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visits" checked /><span>隣接マスの訪問回数</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-visits" checked /><span data-i18n="info.visits"></span></label>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-lastMove" checked /><span>直前の移動方向</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-lastMove" checked /><span data-i18n="info.lastMove"></span></label>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-currentVisits" checked /><span>現在マスの訪問回数</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-currentVisits" checked /><span data-i18n="info.currentVisits"></span></label>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-stepsTaken" /><span>これまでのステップ数</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-stepsTaken" /><span data-i18n="info.stepsTaken"></span></label>
             <label class="field"
-              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-exitHint" /><span>出口の方角（ヒント）</span></label>
+              data-orientation="horizontal"><input type="checkbox" role="switch" class="input" id="info-exitHint" /><span data-i18n="info.exitHint"></span></label>
             <div class="field mt-2">
-              <label for="instructions">指示文（Choice の instructions）</label>
+              <label for="instructions" data-i18n="info.instructions"></label>
               <textarea id="instructions" class="textarea" rows="5"></textarea>
             </div>
             <div class="field">
-              <label for="model">モデル</label>
+              <label for="model" data-i18n="info.model"></label>
               <input id="model" type="text" class="input" value="jev-latest" />
             </div>
           </section>
@@ -133,7 +143,7 @@
       <div class="flex min-w-0 flex-col gap-4">
         <div id="errorBox" class="alert hidden" role="alert"
           data-variant="destructive">
-          <h2>エラー</h2>
+          <h2 data-i18n="error.title"></h2>
           <section id="errorText"></section>
         </div>
 
@@ -143,16 +153,15 @@
               <canvas id="maze"
                 class="mx-auto block bg-white"></canvas>
             </div>
-            <p class="mt-2 text-xs text-muted-foreground">
-            S: スタート、斜線: 出口、黒丸: Jev、白い点: 直前の移動方向、グレーの濃さ: 訪問回数、濃いグレーの線: 軌跡。
-          </p>
+            <p class="mt-2 text-xs text-muted-foreground"
+              data-i18n="legend"></p>
           </section>
         </div>
 
         <div class="grid gap-4 md:grid-cols-2">
           <div class="card" data-size="sm">
             <header>
-              <h2>統計</h2>
+              <h2 data-i18n="stats.title"></h2>
             </header>
             <section>
               <dl id="stats"
@@ -161,9 +170,9 @@
           </div>
           <div class="card" data-size="sm">
             <header>
-              <h2>直近の判断</h2>
+              <h2 data-i18n="decision.title"></h2>
               <p id="decisionMeta"
-                class="text-muted-foreground">まだ判断していません。</p>
+                class="text-muted-foreground"></p>
             </header>
             <section class="flex flex-col gap-2">
               <div id="probs" class="flex flex-col gap-1"></div>
@@ -173,24 +182,24 @@
 
         <div class="card" data-size="sm">
           <header>
-            <h2>試行の履歴</h2>
-            <p>各試行の結果。比率 = ステップ数 ÷ 最短経路長。</p>
+            <h2 data-i18n="history.title"></h2>
+            <p data-i18n="history.desc"></p>
           </header>
           <section class="table-container">
             <table class="table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>迷路</th>
-                  <th>ループ</th>
-                  <th>情報</th>
-                  <th>結果</th>
-                  <th class="text-right">ステップ</th>
-                  <th class="text-right">最短</th>
-                  <th class="text-right">比率</th>
-                  <th class="text-right">API</th>
-                  <th class="text-right">平均遅延</th>
-                  <th class="text-right">時間</th>
+                  <th data-i18n="history.maze"></th>
+                  <th data-i18n="history.braid"></th>
+                  <th data-i18n="history.info"></th>
+                  <th data-i18n="history.result"></th>
+                  <th class="text-right" data-i18n="history.steps"></th>
+                  <th class="text-right" data-i18n="history.shortest"></th>
+                  <th class="text-right" data-i18n="history.ratio"></th>
+                  <th class="text-right" data-i18n="history.api"></th>
+                  <th class="text-right" data-i18n="history.latency"></th>
+                  <th class="text-right" data-i18n="history.time"></th>
                 </tr>
               </thead>
               <tbody id="historyBody"></tbody>
